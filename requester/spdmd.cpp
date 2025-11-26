@@ -40,19 +40,19 @@ void processDiscoveredDevices(
             {
                 error("Transport is null for device {PATH}", "PATH",
                       device.objectPath);
-                continue;
+                //continue;
             }
 
             info("Initializing transport for device {PATH}", "PATH",
                  device.objectPath);
-            if (!device.transport->initialize())
+           /*if (!device.transport->initialize())
             {
                 error("Failed to initialize SPDM transport for device {PATH}",
                       "PATH", device.objectPath);
                 continue;
-            }
+            }*/
 
-            if (static_cast<std::string>(device.deviceObjectPath) != "")
+            //if (static_cast<std::string>(device.deviceObjectPath) != "")
             {
                 info("Creating D-Bus responder for device {PATH}", "PATH",
                      device.objectPath);
@@ -65,7 +65,7 @@ void processDiscoveredDevices(
                 info("Successfully created responder for device {PATH}", "PATH",
                      device.objectPath);
             }
-            else
+           // else
             {
                 error(
                     "DeviceObjectPath is empty for device {PATH}, skipping responder creation",

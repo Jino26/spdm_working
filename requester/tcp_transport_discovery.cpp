@@ -85,7 +85,7 @@ std::optional<ResponderInfo> TCPTransportDiscovery::createDeviceFromInterfaces(
 {
     // Check if it supports TCP endpoint interface
     auto tcpIt =
-        interfaces.find("xyz.openbmc_project.Configuration.SpdmTcpResponder");
+        interfaces.find("xyz.openbmc_project.Configuration.SpdmTcpEndpoint");
     if (tcpIt == interfaces.end())
     {
         debug("Object does not implement TCP endpoint interface: {PATH}",
@@ -100,7 +100,7 @@ std::optional<ResponderInfo> TCPTransportDiscovery::createDeviceFromInterfaces(
     tcpResponderInfo tcpInfo{};
     for (const auto& [propName, propValue] : properties)
     {
-        if (propName == "Hostname")
+        if (propName == "HostName")
         {
             tcpInfo.ipAddr = std::get<std::string>(propValue);
         }
