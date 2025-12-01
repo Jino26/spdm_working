@@ -53,6 +53,8 @@ extern "C"
 #include <limits>
 #include <vector>
 
+PHOSPHOR_LOG2_USING;
+
 #define MCTP_TYPE_SPDM 5
 
 using timeout_us_t = uint64_t; /// in units of 1 micro second

@@ -11,6 +11,8 @@
 
 #include <vector>
 
+PHOSPHOR_LOG2_USING;
+
 namespace spdm
 {
 
