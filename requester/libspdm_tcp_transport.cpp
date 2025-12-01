@@ -3,8 +3,19 @@
 
 #include "libspdm_tcp_transport.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
+#include <algorithm>
+#include <cstring>
+#include <stdexcept>
+
 namespace spdm
 {
+
+// ============================================================================
+// SpdmTcpTransport Implementation
+// ============================================================================
+
 bool SpdmTcpTransport::initialize()
 {
     lg2::info("Initializing SPDM TCP transport for {IP}:{PORT}", "IP", ipAddr,
@@ -45,15 +56,18 @@ bool SpdmTcpTransport::initialize()
     return true;
 }
 
-bool SpdmTcpTransport::allocateContext(){
-    spdmContext = static_cast<void *>(malloc(libspdm_get_context_size()));
-    if(!spdmContext){
+bool SpdmTcpTransport::allocateContext()
+{
+    spdmContext = static_cast<void*>(malloc(libspdm_get_context_size()));
+    if (!spdmContext)
+    {
         lg2::error("Failed to allocate SPDM context");
         return false;
     }
 
     libspdm_return_t status = libspdm_init_context(spdmContext);
-    if(LIBSPDM_STATUS_SUCCESS != status){
+    if (status != LIBSPDM_STATUS_SUCCESS)
+    {
         lg2::error("Failed to initialize SPDM context: 0x{STATUS:X}", "STATUS",
                    status);
         free(spdmContext);
@@ -61,14 +75,16 @@ bool SpdmTcpTransport::allocateContext(){
         return false;
     }
 
-    libspdm_context_t *context = static_cast<libspdm_context_t *>(spdmContext);
+    // Store pointer to this transport for callback access
+    libspdm_context_t* context = static_cast<libspdm_context_t*>(spdmContext);
     context->app_context_data_ptr = this;
 
     lg2::debug("SPDM context allocated and initialized");
     return true;
 }
 
-bool SpdmTcpTransport::registerFunctions(){
+bool SpdmTcpTransport::registerFunctions()
+{
     // Register device I/O functions
     libspdm_register_device_io_func(spdmContext,
                                     &SpdmTcpTransport::deviceSendMessage,
@@ -94,11 +110,14 @@ bool SpdmTcpTransport::registerFunctions(){
     return true;
 }
 
-bool SpdmTcpTransport::setupScratchBuffer(){
-    size_t scratchBufferSize = libspdm_get_sizeof_required_scratch_buffer(spdmContext);
+bool SpdmTcpTransport::setupScratchBuffer()
+{
+    size_t scratchBufferSize =
+        libspdm_get_sizeof_required_scratch_buffer(spdmContext);
 
     scratchBuffer = malloc(scratchBufferSize);
-    if(!scratchBuffer){
+    if (scratchBuffer == nullptr)
+    {
         lg2::error("Failed to allocate scratch buffer of size {SIZE}", "SIZE",
                    scratchBufferSize);
         return false;
@@ -159,26 +178,24 @@ bool SpdmTcpTransport::configureContext()
 
 void SpdmTcpTransport::cleanupContext()
 {
-    if(scratchBuffer)
+    if (scratchBuffer)
     {
         free(scratchBuffer);
         scratchBuffer = nullptr;
     }
-
-    if(spdmContext){
+    if (spdmContext)
+    {
         libspdm_deinit_context(spdmContext);
         free(spdmContext);
         spdmContext = nullptr;
     }
-
     tcpIo.closeSocket();
     lg2::debug("SPDM TCP transport resources cleaned up");
 }
 
-libspdm_return_t SpdmTcpTransport::deviceSendMessage(void* spdmContext,
-                                                     size_t messageSize,
-                                                     const void* message,
-                                                     uint64_t timeout)
+libspdm_return_t SpdmTcpTransport::deviceSendMessage(
+    void* spdmContext, size_t messageSize, const void* message,
+    uint64_t timeout)
 {
     try
     {
@@ -194,11 +211,11 @@ libspdm_return_t SpdmTcpTransport::deviceSendMessage(void* spdmContext,
         }
 
         // Create SPDM message vector
-        std::vector<uint8_t> spdmMsg(static_cast<const uint8_t*>(message),
-                                     static_cast<const uint8_t*>(message) +
-                                         messageSize);
+        std::vector<uint8_t> spdmMsg(
+            static_cast<const uint8_t*>(message),
+            static_cast<const uint8_t*>(message) + messageSize);
 
-        // Encode for TCP transport
+        // Encode for TCP transport (platform message format)
         std::vector<uint8_t> tcpMessage;
         libspdm_return_t encodeStatus =
             transport->tcpTransport.encode(tcpMessage, spdmMsg);
@@ -208,28 +225,42 @@ libspdm_return_t SpdmTcpTransport::deviceSendMessage(void* spdmContext,
             return LIBSPDM_STATUS_SEND_FAIL;
         }
 
+        // Debug: show header bytes being sent
+        if (tcpMessage.size() >= 12)
+        {
+            lg2::info(
+                "TCP send header: cmd={CMD:02X} {C1:02X} {C2:02X} {C3:02X} "
+                "type={T0:02X} {T1:02X} {T2:02X} {T3:02X} "
+                "size={S0:02X} {S1:02X} {S2:02X} {S3:02X}",
+                "CMD", tcpMessage[0], "C1", tcpMessage[1], "C2", tcpMessage[2],
+                "C3", tcpMessage[3], "T0", tcpMessage[4], "T1", tcpMessage[5],
+                "T2", tcpMessage[6], "T3", tcpMessage[7], "S0", tcpMessage[8],
+                "S1", tcpMessage[9], "S2", tcpMessage[10], "S3",
+                tcpMessage[11]);
+        }
+
         // Send over TCP
-        libspdm_return_t sendStatus = transport->tcpIo.write(tcpMessage, timeout);
+        libspdm_return_t sendStatus =
+            transport->tcpIo.write(tcpMessage, timeout);
         if (sendStatus != LIBSPDM_STATUS_SUCCESS)
         {
             lg2::error("Failed to send SPDM message over TCP");
             return LIBSPDM_STATUS_SEND_FAIL;
         }
 
-        lg2::debug("Sent SPDM message: {SIZE} bytes", "SIZE", messageSize);
+        lg2::info("Sent SPDM message: {SIZE} bytes (total TCP: {TOTAL})",
+                  "SIZE", messageSize, "TOTAL", tcpMessage.size());
         return LIBSPDM_STATUS_SUCCESS;
     }
-    catch(const std::exception& e)
+    catch (const std::exception& e)
     {
         lg2::error("Exception in TCP send: {ERROR}", "ERROR", e.what());
         return LIBSPDM_STATUS_SEND_FAIL;
     }
 }
 
-libspdm_return_t SpdmTcpTransport::deviceReceiveMessage(void* spdmContext,
-                                                        size_t* messageSize,
-                                                        void** message,
-                                                        uint64_t timeout)
+libspdm_return_t SpdmTcpTransport::deviceReceiveMessage(
+    void* spdmContext, size_t* messageSize, void** message, uint64_t timeout)
 {
     try
     {
@@ -247,7 +278,8 @@ libspdm_return_t SpdmTcpTransport::deviceReceiveMessage(void* spdmContext,
 
         // Read from TCP
         std::vector<uint8_t> tcpMessage;
-        libspdm_return_t readStatus = transport->tcpIo.read(tcpMessage, timeout);
+        libspdm_return_t readStatus =
+            transport->tcpIo.read(tcpMessage, timeout);
         if (readStatus != LIBSPDM_STATUS_SUCCESS)
         {
             lg2::error("Failed to receive SPDM message over TCP");
@@ -273,8 +305,8 @@ libspdm_return_t SpdmTcpTransport::deviceReceiveMessage(void* spdmContext,
     }
 }
 
-libspdm_return_t SpdmTcpTransport::spdmDeviceAcquireSenderBuffer(void* context,
-                                                                 void** msgBufPtr)
+libspdm_return_t SpdmTcpTransport::spdmDeviceAcquireSenderBuffer(
+    void* context, void** msgBufPtr)
 {
     libspdm_context_t* spdmContext = static_cast<libspdm_context_t*>(context);
     auto* transport =
@@ -324,8 +356,8 @@ libspdm_return_t SpdmTcpTransport::spdmDeviceAcquireReceiverBuffer(
     return LIBSPDM_STATUS_SUCCESS;
 }
 
-void SpdmTcpTransport::spdmDeviceReleaseReceiverBuffer(void* context,
-                                                       const void* /*msgBufPtr*/)
+void SpdmTcpTransport::spdmDeviceReleaseReceiverBuffer(
+    void* context, const void* /*msgBufPtr*/)
 {
     libspdm_context_t* spdmContext = static_cast<libspdm_context_t*>(context);
     auto* transport =
@@ -333,4 +365,4 @@ void SpdmTcpTransport::spdmDeviceReleaseReceiverBuffer(void* context,
     transport->sendReceiveBufferAcquired = false;
 }
 
-}; // namespace spdm
+} // namespace spdm

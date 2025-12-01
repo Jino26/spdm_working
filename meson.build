@@ -73,6 +73,7 @@ if get_option('coverage')
 endif
 
 spdmd_src = [
+    'requester/spdmd.cpp',
     'requester/spdm_discovery.cpp',
     'requester/mctp_transport_discovery.cpp',
     'requester/utils.cpp',
@@ -84,12 +85,11 @@ spdmd_src = [
     'requester/libspdm_mctp_transport.cpp',
     'requester/certificate_dbus.cpp',
     'requester/libspdm_tcp_transport.cpp',
-    'requester/spdm_simple_client.cpp',
 ]
 
 spdmd_includes = include_directories('requester')
 executable(
-    'spdmd_client_tcp',
+    'spdmd',
     spdmd_src,
     dependencies: spdmd_deps,
     include_directories: spdmd_includes,
