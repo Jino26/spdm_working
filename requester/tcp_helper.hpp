@@ -24,9 +24,9 @@ constexpr size_t tcpMaxMessageSize = 65536;
  */
 enum class PlatformCommand : uint32_t
 {
-    Normal = 0x0001,   ///< Normal SPDM message
-    Stop = 0xFFFE,     ///< Stop the responder
-    Shutdown = 0xFFFF, ///< Shutdown command
+    Normal = 0x0001,   //< Normal SPDM message
+    Stop = 0xFFFE,     //< Stop the responder
+    Shutdown = 0xFFFF, //< Shutdown command
 };
 
 /**
@@ -34,10 +34,10 @@ enum class PlatformCommand : uint32_t
  */
 enum class PlatformTransportType : uint32_t
 {
-    None = 0x00,    ///< No transport
-    MCTP = 0x01,    ///< MCTP transport (use with --trans MCTP)
-    PCI_DOE = 0x02, ///< PCI DOE transport (use with --trans PCI_DOE)
-    TCP = 0x03,     ///< TCP transport (use with --trans TCP)
+    None = 0x00,    //< No transport
+    MCTP = 0x01,    //< MCTP transport (use with --trans MCTP)
+    PCI_DOE = 0x02, //< PCI DOE transport (use with --trans PCI_DOE)
+    TCP = 0x03,     //< TCP transport (use with --trans TCP)
 };
 
 /**
@@ -180,7 +180,6 @@ class TcpMessageTransport : public NonCopyable
  * @class TcpIoClass
  * @brief TCP socket I/O implementation for SPDM communication
  * @details Handles TCP socket creation, connection, and data transfer.
- *          Inherits from IOClass for consistency with MCTP implementation.
  */
 // NOLINTNEXTLINE cppcoreguidelines-special-member-functions
 class TcpIoClass : public IOClass

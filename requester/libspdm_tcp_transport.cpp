@@ -3,6 +3,11 @@
 
 #include "libspdm_tcp_transport.hpp"
 
+extern "C"
+{
+#include "library/spdm_transport_tcp_lib.h"
+}
+
 #include <phosphor-logging/lg2.hpp>
 
 #include <algorithm>
@@ -11,11 +16,6 @@
 
 namespace spdm
 {
-
-// ============================================================================
-// SpdmTcpTransport Implementation
-// ============================================================================
-
 bool SpdmTcpTransport::initialize()
 {
     lg2::info("Initializing SPDM TCP transport for {IP}:{PORT}", "IP", ipAddr,
@@ -90,13 +90,11 @@ bool SpdmTcpTransport::registerFunctions()
                                     &SpdmTcpTransport::deviceSendMessage,
                                     &SpdmTcpTransport::deviceReceiveMessage);
 
-    // Register transport layer functions
-    // Note: Using MCTP transport encode/decode as the message format is similar
     // The TCP framing is handled by TcpMessageTransport
     libspdm_register_transport_layer_func(
         spdmContext, LIBSPDM_MAX_SPDM_MSG_SIZE, LIBSPDM_TRANSPORT_HEADER_SIZE,
-        LIBSPDM_TRANSPORT_TAIL_SIZE, libspdm_transport_mctp_encode_message,
-        libspdm_transport_mctp_decode_message);
+        LIBSPDM_TRANSPORT_TAIL_SIZE, libspdm_transport_tcp_encode_message,
+        libspdm_transport_tcp_decode_message);
 
     // Register buffer management functions
     libspdm_register_device_buffer_func(
@@ -286,6 +284,20 @@ libspdm_return_t SpdmTcpTransport::deviceReceiveMessage(
             return LIBSPDM_STATUS_RECEIVE_FAIL;
         }
 
+        // Debug: show header bytes received
+        if (tcpMessage.size() >= 12)
+        {
+            lg2::info(
+                "TCP recv header: cmd={CMD:02X} {C1:02X} {C2:02X} {C3:02X} "
+                "type={T0:02X} {T1:02X} {T2:02X} {T3:02X} "
+                "size={S0:02X} {S1:02X} {S2:02X} {S3:02X}",
+                "CMD", tcpMessage[0], "C1", tcpMessage[1], "C2", tcpMessage[2],
+                "C3", tcpMessage[3], "T0", tcpMessage[4], "T1", tcpMessage[5],
+                "T2", tcpMessage[6], "T3", tcpMessage[7], "S0", tcpMessage[8],
+                "S1", tcpMessage[9], "S2", tcpMessage[10], "S3",
+                tcpMessage[11]);
+        }
+
         // Decode TCP transport message to extract SPDM message
         libspdm_return_t decodeStatus =
             transport->tcpTransport.decode(tcpMessage, message, messageSize);
@@ -295,7 +307,8 @@ libspdm_return_t SpdmTcpTransport::deviceReceiveMessage(
             return LIBSPDM_STATUS_RECEIVE_FAIL;
         }
 
-        lg2::debug("Received SPDM message: {SIZE} bytes", "SIZE", *messageSize);
+        lg2::info("Received SPDM message: {SIZE} bytes (total TCP: {TOTAL})",
+                  "SIZE", *messageSize, "TOTAL", tcpMessage.size());
         return LIBSPDM_STATUS_SUCCESS;
     }
     catch (const std::exception& e)
