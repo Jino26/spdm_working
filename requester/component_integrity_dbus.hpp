@@ -125,12 +125,6 @@ class ComponentIntegrity :
     /** @brief Object path for this component */
     std::string path;
 
-    /**
-     * @brief Initialize SPDM connection
-     * @throws std::runtime_error if initialization fails
-     */
-    void initializeSpdmConnection();
-
   protected:
     /**
      * @brief Validate measurement indices
@@ -162,6 +156,12 @@ class ComponentIntegrity :
      */
     void checkForDuplicateIndices(
         const std::vector<size_t>& measurementIndices);
+
+    /**
+     * @brief Initialize SPDM connection
+     * @throws std::runtime_error if initialization fails
+     */
+    void initializeSpdmConnection();
 
     /**
      * @brief Get certificate digests from SPDM device

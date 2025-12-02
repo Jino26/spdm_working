@@ -14,6 +14,8 @@ extern "C"
 #include <cstring>
 #include <stdexcept>
 
+#define DEBUG 0
+
 namespace spdm
 {
 bool SpdmTcpTransport::initialize()
@@ -223,7 +225,7 @@ libspdm_return_t SpdmTcpTransport::deviceSendMessage(
             return LIBSPDM_STATUS_SEND_FAIL;
         }
 
-        // Debug: show header bytes being sent
+#if DEBUG
         if (tcpMessage.size() >= 12)
         {
             lg2::info(
@@ -236,6 +238,7 @@ libspdm_return_t SpdmTcpTransport::deviceSendMessage(
                 "S1", tcpMessage[9], "S2", tcpMessage[10], "S3",
                 tcpMessage[11]);
         }
+#endif
 
         // Send over TCP
         libspdm_return_t sendStatus =
@@ -284,7 +287,7 @@ libspdm_return_t SpdmTcpTransport::deviceReceiveMessage(
             return LIBSPDM_STATUS_RECEIVE_FAIL;
         }
 
-        // Debug: show header bytes received
+#if DEBUG
         if (tcpMessage.size() >= 12)
         {
             lg2::info(
@@ -297,6 +300,7 @@ libspdm_return_t SpdmTcpTransport::deviceReceiveMessage(
                 "S1", tcpMessage[9], "S2", tcpMessage[10], "S3",
                 tcpMessage[11]);
         }
+#endif
 
         // Decode TCP transport message to extract SPDM message
         libspdm_return_t decodeStatus =

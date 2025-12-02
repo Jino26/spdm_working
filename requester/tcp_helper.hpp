@@ -24,9 +24,9 @@ constexpr size_t tcpMaxMessageSize = 65536;
  */
 enum class PlatformCommand : uint32_t
 {
-    Normal = 0x0001,   //< Normal SPDM message
-    Stop = 0xFFFE,     //< Stop the responder
-    Shutdown = 0xFFFF, //< Shutdown command
+    Normal = 0x0001,   // Normal SPDM message
+    Stop = 0xFFFE,     // Stop the responder
+    Shutdown = 0xFFFF, // Shutdown command
 };
 
 /**
@@ -34,10 +34,10 @@ enum class PlatformCommand : uint32_t
  */
 enum class PlatformTransportType : uint32_t
 {
-    None = 0x00,    //< No transport
-    MCTP = 0x01,    //< MCTP transport (use with --trans MCTP)
-    PCI_DOE = 0x02, //< PCI DOE transport (use with --trans PCI_DOE)
-    TCP = 0x03,     //< TCP transport (use with --trans TCP)
+    None = 0x00,    // No transport
+    MCTP = 0x01,    // MCTP transport
+    PCI_DOE = 0x02, // PCI DOE transport
+    TCP = 0x03,     // TCP transport
 };
 
 /**
@@ -47,7 +47,7 @@ enum class PlatformTransportType : uint32_t
  *          - transportType (4 bytes, big endian)
  *          - size (4 bytes, big endian)
  *
- *          NOTE: The SPDM payload after the header is little endian!
+ *          NOTE: The SPDM payload after the header is little endian
  */
 constexpr size_t platformHeaderSize = 12;
 
@@ -57,7 +57,7 @@ constexpr size_t platformHeaderSize = 12;
  * @details This class handles encoding and decoding of SPDM messages for
  *          communication with libspdm's spdm_responder_emu.
  *
- *          Wire format for spdm_emu (from spdm_test_command.h):
+ *          Wire format for spdm_emu (from command.h in spdm-emu):
  *          +-------------------+---------------------+------------------+
  *          | Command (4 bytes) | TransportType (4B)  | Size (4 bytes)   |
  *          | BIG ENDIAN        | BIG ENDIAN          | BIG ENDIAN       |
@@ -504,12 +504,15 @@ class TcpIoClass : public IOClass
     }
 
   private:
-    std::string ipAddr; ///< IP address of responder
-    uint16_t port;      ///< TCP port of responder
-    int socketFd = -1;  ///< Socket file descriptor
+    std::string ipAddr;
+    uint16_t port;
+    int socketFd = -1;
 
-    /// Connection timeout in milliseconds
+    // Connection timeout in milliseconds
     static constexpr int connectTimeoutMs = 5000;
+
+    // Minimum socket timeout (5 seconds) to avoid network latency issues
+    static constexpr timeout_us_t minSocketTimeoutUs = 5000000;
 
     /**
      * @brief Set socket timeout options
@@ -523,10 +526,21 @@ class TcpIoClass : public IOClass
             return false;
         }
 
+        // Log the timeout value for debugging
+        lg2::debug("Setting socket timeout: {TIMEOUT_US} us", "TIMEOUT_US",
+                   timeout);
+
         // Handle infinite timeout
         if (timeout == timeoutUsInfinite)
         {
             timeout = 0; // 0 means no timeout for setsockopt
+        }
+        else if (timeout > 0 && timeout < minSocketTimeoutUs)
+        {
+            // Enforce minimum timeout to avoid premature timeouts
+            lg2::debug("Timeout {TIMEOUT} us too short, using minimum {MIN} us",
+                       "TIMEOUT", timeout, "MIN", minSocketTimeoutUs);
+            timeout = minSocketTimeoutUs;
         }
 
         struct timeval tv;

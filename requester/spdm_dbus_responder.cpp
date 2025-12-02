@@ -32,8 +32,6 @@ SPDMDBusResponder::SPDMDBusResponder(const ResponderInfo& responderInfo,
     info(
         "Created SPDM D-Bus responder for device at {PATH}, device name {DEVICE_NAME}",
         "PATH", responderInfo.objectPath, "DEVICE_NAME", deviceName);
-
-    componentIntegrity->initializeSpdmConnection();
 }
 
 } // namespace spdm
