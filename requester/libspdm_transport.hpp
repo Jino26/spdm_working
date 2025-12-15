@@ -82,7 +82,7 @@ class SpdmTransport
         SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSASSA_2048;
     uint16_t supportDheAlgo = SPDM_ALGORITHMS_DHE_NAMED_GROUP_SECP_384_R1;
     uint16_t supportAeadAlgo = SPDM_ALGORITHMS_AEAD_CIPHER_SUITE_AES_256_GCM;
-    uint16_t supportKeyScheduleAlgo = SPDM_ALGORITHMS_KEY_SCHEDULE_HMAC_HASH;
+    uint16_t supportKeyScheduleAlgo = SPDM_ALGORITHMS_KEY_SCHEDULE_SPDM;
     uint8_t supportOtherParamsSupport = 0;
     libspdm_data_parameter_t parameter;
     void* spdmContext;

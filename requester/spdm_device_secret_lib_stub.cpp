@@ -29,36 +29,35 @@ extern "C"
 
 #if LIBSPDM_ENABLE_CAPABILITY_MEAS_CAP
 libspdm_return_t libspdm_measurement_collection(
-#if LIBSPDM_HAL_PASS_SPDM_CONTEXT
     void* /* spdm_context */,
-#endif
     spdm_version_number_t /* spdm_version */,
     uint8_t /* measurement_specification */,
     uint32_t /* measurement_hash_algo */, uint8_t /* mesurements_index */,
-    uint8_t /* request_attribute */, uint8_t* /* content_changed */,
-    uint8_t* /* device_measurement_count */, void* /* device_measurement */,
-    size_t* /* device_measurement_size */)
+    uint8_t /* request_attribute */, 
+    size_t /*request_context_size */,
+    const void * /* request_context */,
+    uint8_t * /* content_changed */,
+    uint8_t * /* measurements_count */,
+    void * /*measurements*/,
+    size_t * /* measurements_size */)
+
 {
     return static_cast<libspdm_return_t>(0x80000000U);
 }
 
 bool libspdm_measurement_opaque_data(
-#if LIBSPDM_HAL_PASS_SPDM_CONTEXT
     void* /* spdm_context */,
-#endif
     spdm_version_number_t /* spdm_version */,
     uint8_t /* measurement_specification */,
     uint32_t /* measurement_hash_algo */, uint8_t /* measurement_index */,
-    uint8_t /* request_attribute */, void* /* opaque_data */,
+    uint8_t /* request_attribute */, size_t /* request_context_size */, const void * /*request_context*/, void* /* opaque_data */,
     size_t* /* opaque_data_size */)
 {
     return false;
 }
 
 bool libspdm_generate_measurement_summary_hash(
-#if LIBSPDM_HAL_PASS_SPDM_CONTEXT
     void* /* spdm_context */,
-#endif
     spdm_version_number_t /* spdm_version */, uint32_t /* base_hash_algo */,
     uint8_t /* measurement_specification */,
     uint32_t /* measurement_hash_algo */,
@@ -72,12 +71,9 @@ bool libspdm_generate_measurement_summary_hash(
 
 #if LIBSPDM_ENABLE_CAPABILITY_CHAL_CAP
 bool libspdm_challenge_opaque_data(
-#if LIBSPDM_HAL_PASS_SPDM_CONTEXT
     void* /* spdm_context */,
-#endif
     spdm_version_number_t /* spdm_version */, uint8_t /* slot_id */,
-    uint8_t* /* measurement_summary_hash */,
-    size_t /* measurement_summary_hash_size */, void* /* opaque_data */,
+    size_t /* request_context_size*/, const void * /* request_context */,  void* /* opaque_data */,
     size_t* /* opaque_data_size */)
 {
     return false;
@@ -86,12 +82,10 @@ bool libspdm_challenge_opaque_data(
 
 #if LIBSPDM_ENABLE_CAPABILITY_CHAL_CAP
 bool libspdm_encap_challenge_opaque_data(
-#if LIBSPDM_HAL_PASS_SPDM_CONTEXT
     void* /* spdm_context */,
-#endif
     spdm_version_number_t /* spdm_version */, uint8_t /* slot_id */,
-    uint8_t* /* measurement_summary_hash */,
-    size_t /* measurement_summary_hash_size */, void* /* opaque_data */,
+    size_t /* request_context_size*/, const void * /* request_context */,
+    void* /* opaque_data */,
     size_t* /* opaque_data_size */)
 {
     return false;
@@ -112,24 +106,27 @@ bool libspdm_measurement_extension_log_collection(
 
 #if LIBSPDM_ENABLE_CAPABILITY_MUT_AUTH_CAP
 bool libspdm_requester_data_sign(
-#if LIBSPDM_HAL_PASS_SPDM_CONTEXT
     void* /* spdm_context */,
-#endif
-    spdm_version_number_t /* spdm_version */, uint8_t /* op_code */,
-    uint16_t /* req_base_asym_alg */, uint32_t /* base_hash_algo */,
-    bool /* is_data_hash */, const uint8_t* /* message */,
-    size_t /* message_size */, uint8_t* /* signature */, size_t* /* sig_size */)
+    spdm_version_number_t /* spdm_version */,
+    uint8_t               /* key_pair_id */,
+    uint8_t               /* op_code */,
+    uint16_t              /* req_base_asym_alg */,
+    uint32_t              /* req_pqc_asym_alg */,
+    uint32_t              /* base_hash_algo */,
+    bool                  /* is_data_hash */,
+    const uint8_t *       /* message */,
+    size_t                /* message_size */,
+    uint8_t *             /* signature */,
+    size_t *              /* sig_size */)
 {
     return false;
 }
 #endif /* LIBSPDM_ENABLE_CAPABILITY_MUT_AUTH_CAP */
 
 bool libspdm_responder_data_sign(
-#if LIBSPDM_HAL_PASS_SPDM_CONTEXT
     void* /* spdm_context */,
-#endif
-    spdm_version_number_t /* spdm_version */, uint8_t /* op_code */,
-    uint32_t /* base_asym_algo */, uint32_t /* base_hash_algo */,
+    spdm_version_number_t /* spdm_version */, uint8_t /* key_pair_id */, uint8_t /* op_code */,
+    uint32_t /* base_asym_algo */, uint32_t /* pqc_asym_algo */, uint32_t /* base_hash_algo */,
     bool /* is_data_hash */, const uint8_t* /* message */,
     size_t /* message_size */, uint8_t* /* signature */, size_t* /* sig_size */)
 {
@@ -158,25 +155,18 @@ bool libspdm_psk_master_secret_hkdf_expand(
 
 #if LIBSPDM_ENABLE_CAPABILITY_SET_CERT_CAP
 bool libspdm_is_in_trusted_environment(
-#if LIBSPDM_HAL_PASS_SPDM_CONTEXT
     void* /* spdm_context */
-#endif
 )
 {
     return false;
 }
 
 bool libspdm_write_certificate_to_nvm(
-#if LIBSPDM_HAL_PASS_SPDM_CONTEXT
     void* /* spdm_context */,
-#endif
     uint8_t /* slot_id */, const void* /* cert_chain */,
     size_t /* cert_chain_size */, uint32_t /* base_hash_algo */,
-    uint32_t /* base_asym_algo */
-#if LIBSPDM_SET_CERT_CSR_PARAMS
-    ,
+    uint32_t /* base_asym_algo */, uint32_t /* pqc_asym_algo */,
     bool* /* need_reset */, bool* /* is_busy */
-#endif                            /* LIBSPDM_SET_CERT_CSR_PARAMS */
 )
 {
     return false;
@@ -186,19 +176,14 @@ bool libspdm_write_certificate_to_nvm(
 
 #if LIBSPDM_ENABLE_CAPABILITY_CSR_CAP
 bool libspdm_gen_csr(
-#if LIBSPDM_HAL_PASS_SPDM_CONTEXT
     void* /* spdm_context */,
-#endif
     uint32_t /* base_hash_algo */, uint32_t /* base_asym_algo */,
     bool* /* need_reset */, const void* /* request */,
     size_t /* request_size */, uint8_t* /* requester_info */,
     size_t /* requester_info_length */, uint8_t* /* opaque_data */,
     uint16_t /* opaque_data_length */, size_t* /* csr_len */,
-    uint8_t* /* csr_pointer */, bool /* is_device_cert_model */
-#if LIBSPDM_SET_CERT_CSR_PARAMS
-    ,
+    uint8_t* /* csr_pointer */, bool /* is_device_cert_model */,
     bool* /* is_busy */, bool* /* unexpected_request */
-#endif
 )
 {
     return false;
@@ -206,21 +191,16 @@ bool libspdm_gen_csr(
 
 #if LIBSPDM_ENABLE_CAPABILITY_CSR_CAP_EX
 bool libspdm_gen_csr_ex(
-#if LIBSPDM_HAL_PASS_SPDM_CONTEXT
     void* /* spdm_context */,
-#endif
-    uint32_t /* base_hash_algo */, uint32_t /* base_asym_algo */,
+    uint32_t /* base_hash_algo */, uint32_t /* base_asym_algo */, uint32_t /* pqc_asym_algo */,
     bool* /* need_reset */, const void* /* request */,
     size_t /* request_size */, uint8_t* /* requester_info */,
     size_t /* requester_info_length */, uint8_t* /* opaque_data */,
     uint16_t /* opaque_data_length */, size_t* /* csr_len */,
     uint8_t* /* csr_pointer */, uint8_t /* req_cert_model */,
     uint8_t* /* csr_tracking_tag */, uint8_t /* req_key_pair_id */,
-    bool /* overwrite */
-#if LIBSPDM_SET_CERT_CSR_PARAMS
-    ,
+    bool /* overwrite */,
     bool* /* is_busy */, bool* /* unexpected_request */
-#endif
 )
 {
     return false;
@@ -279,11 +259,18 @@ bool libspdm_event_subscribe(
  * @retval false get key pair info failed.
  **/
 bool libspdm_read_key_pair_info(
-    void* /* spdm_context */, uint8_t /* key_pair_id */,
-    uint16_t* /* capabilities */, uint16_t* /* key_usage_capabilities */,
-    uint16_t* /* current_key_usage */, uint32_t* /* asym_algo_capabilities */,
-    uint32_t* /* current_asym_algo */, uint8_t* /* assoc_cert_slot_mask */,
-    uint16_t* /* public_key_info_len */, uint8_t* /* public_key_info */)
+    void * /*spdm_context*/,
+    uint8_t /*key_pair_id*/,
+    uint16_t * /*capabilities*/,
+    uint16_t * /*key_usage_capabilities*/,
+    uint16_t * /*current_key_usage*/,
+    uint32_t * /*asym_algo_capabilities*/,
+    uint32_t * /*current_asym_algo*/,
+    uint32_t * /*pqc_asym_algo_capabilities*/,
+    uint32_t * /*current_pqc_asym_algo*/,
+    uint8_t * /*assoc_cert_slot_mask*/,
+    uint16_t * /*public_key_info_len*/,
+    uint8_t * /*public_key_info*/)
 {
     return false;
 }
@@ -293,7 +280,7 @@ bool libspdm_read_key_pair_info(
 bool libspdm_write_key_pair_info(
     void* /* spdm_context */, uint8_t /* key_pair_id */,
     uint8_t /* operation */, uint16_t /* desired_key_usage */,
-    uint32_t /* desired_asym_algo */,
+    uint32_t /* desired_asym_algo */,  uint32_t /*desired_pqc_asym_algo*/,
     uint8_t /* desired_assoc_cert_slot_mask */, bool* /* need_reset */)
 {
     return false;
@@ -309,6 +296,16 @@ libspdm_return_t libspdm_generate_device_endpoint_info(
     return static_cast<libspdm_return_t>(0x80000000U);
 }
 #endif /* #if LIBSPDM_ENABLE_CAPABILITY_ENDPOINT_INFO_CAP */
+
+bool libspdm_challenge_start_mut_auth(
+    void * /*spdm_context*/,
+    spdm_version_number_t /*spdm_version*/,
+    uint8_t /*slot_id*/,
+    size_t /*request_context_size*/,
+    const void * /*request_context*/)
+{
+        return false;
+}
 }
 
 // NOLINTEND(readability-function-size)
