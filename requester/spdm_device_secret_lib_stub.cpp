@@ -27,6 +27,10 @@ extern "C"
 #include "hal/library/requester/psklib.h"
 // clang-format on
 
+#ifndef LIBSPDM_UNUSED
+#define LIBSPDM_UNUSED(x) ((void)(x))
+#endif
+
 #if LIBSPDM_ENABLE_CAPABILITY_MEAS_CAP
 libspdm_return_t libspdm_measurement_collection(
     void* /* spdm_context */,
@@ -306,6 +310,36 @@ bool libspdm_challenge_start_mut_auth(
 {
         return false;
 }
+
+uint8_t libspdm_key_exchange_start_mut_auth(
+    void *spdm_context,
+    uint32_t session_id,
+    spdm_version_number_t spdm_version,
+    uint8_t slot_id,
+    uint8_t *req_slot_id,
+    uint8_t session_policy,
+    size_t opaque_data_length,
+    const void *opaque_data,
+    bool *mandatory_mut_auth)
+{
+    LIBSPDM_UNUSED(spdm_context);
+    LIBSPDM_UNUSED(session_id);
+    LIBSPDM_UNUSED(spdm_version);
+    LIBSPDM_UNUSED(slot_id);
+    LIBSPDM_UNUSED(session_policy);
+    LIBSPDM_UNUSED(opaque_data_length);
+    LIBSPDM_UNUSED(opaque_data);
+
+    if (req_slot_id) {
+        *req_slot_id = 0;
+    }
+    if (mandatory_mut_auth) {
+        *mandatory_mut_auth = false;
+    }
+
+    return LIBSPDM_STATUS_SUCCESS;
+}
+
 }
 
 // NOLINTEND(readability-function-size)
