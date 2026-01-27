@@ -14,7 +14,7 @@ extern "C"
 #include <cstring>
 #include <stdexcept>
 
-#define DEBUG 0
+#define DEBUG 1
 
 namespace spdm
 {
