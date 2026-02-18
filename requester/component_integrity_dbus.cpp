@@ -8,10 +8,18 @@
 
 extern "C"
 {
+#include "library/spdm_lib_config.h"
 #include "library/spdm_common_lib.h"
 #include "library/spdm_requester_lib.h"
 #include "library/spdm_return_status.h"
 }
+
+/* LIBSPDM_MAX_CERT_CHAIN_SIZE is only defined in spdm_lib_config.h when
+ * LIBSPDM_RECORD_TRANSCRIPT_DATA_SUPPORT=1. Provide a fallback for builds
+ * where transcript buffering is disabled (the default). */
+#ifndef LIBSPDM_MAX_CERT_CHAIN_SIZE
+#define LIBSPDM_MAX_CERT_CHAIN_SIZE 0x1000
+#endif
 
 #include <phosphor-logging/lg2.hpp>
 

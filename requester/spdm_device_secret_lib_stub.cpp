@@ -34,27 +34,33 @@ extern "C"
 #if LIBSPDM_ENABLE_CAPABILITY_MEAS_CAP
 libspdm_return_t libspdm_measurement_collection(
     void* /* spdm_context */,
+    const uint32_t* /* session_id */,
     spdm_version_number_t /* spdm_version */,
     uint8_t /* measurement_specification */,
-    uint32_t /* measurement_hash_algo */, uint8_t /* mesurements_index */,
-    uint8_t /* request_attribute */, 
-    size_t /*request_context_size */,
-    const void * /* request_context */,
-    uint8_t * /* content_changed */,
-    uint8_t * /* measurements_count */,
-    void * /*measurements*/,
-    size_t * /* measurements_size */)
-
+    uint32_t /* measurement_hash_algo */,
+    uint8_t /* measurement_index */,
+    uint8_t /* request_attribute */,
+    size_t /* request_context_size */,
+    const void* /* request_context */,
+    uint8_t* /* content_changed */,
+    uint8_t* /* measurements_count */,
+    void* /* measurements */,
+    size_t* /* measurements_size */)
 {
     return static_cast<libspdm_return_t>(0x80000000U);
 }
 
 bool libspdm_measurement_opaque_data(
     void* /* spdm_context */,
+    const uint32_t* /* session_id */,
     spdm_version_number_t /* spdm_version */,
     uint8_t /* measurement_specification */,
-    uint32_t /* measurement_hash_algo */, uint8_t /* measurement_index */,
-    uint8_t /* request_attribute */, size_t /* request_context_size */, const void * /*request_context*/, void* /* opaque_data */,
+    uint32_t /* measurement_hash_algo */,
+    uint8_t /* measurement_index */,
+    uint8_t /* request_attribute */,
+    size_t /* request_context_size */,
+    const void* /* request_context */,
+    void* /* opaque_data */,
     size_t* /* opaque_data_size */)
 {
     return false;
@@ -174,6 +180,13 @@ bool libspdm_write_certificate_to_nvm(
 )
 {
     return false;
+}
+
+uint32_t libspdm_get_cert_chain_slot_storage_size(
+    void* /* spdm_context */,
+    uint8_t /* slot_id */)
+{
+    return 0;
 }
 
 #endif /* LIBSPDM_ENABLE_CAPABILITY_SET_CERT_CAP */
