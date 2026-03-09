@@ -85,6 +85,8 @@ spdmd_src = [
     'requester/libspdm_mctp_transport.cpp',
     'requester/certificate_dbus.cpp',
     'requester/libspdm_tcp_transport.cpp',
+    'requester/policy_manager.cpp',
+    'requester/policy_manager.hpp',
 ]
 
 spdmd_includes = include_directories('requester')
@@ -96,6 +98,7 @@ executable(
     cpp_args: sanitizer_flags,
     install: true,
     install_dir: 'libexec',
+    cpp_args: ['-DPOLICY_CACHE_PATH="' + policy_cache_path + '"'],
 )
 
 # Test subdirectory
@@ -114,3 +117,5 @@ if get_option('coverage')
         build_by_default: false,
     )
 endif
+
+policy_cache_path = get_option('localstatedir') + '/lib/spdm/policy.json'
