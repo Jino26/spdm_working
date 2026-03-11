@@ -355,6 +355,63 @@ uint8_t libspdm_key_exchange_start_mut_auth(
     return LIBSPDM_STATUS_SUCCESS;
 }
 
+#if LIBSPDM_ENABLE_CAPABILITY_KEY_EX_CAP 
+bool libspdm_key_exchange_rsp_opaque_data(
+    void * /*spdm_context*/,
+    spdm_version_number_t /*spdm_version*/,
+    uint8_t /*measurement_hash_type*/,
+    uint8_t /*slot_id*/,
+    uint8_t /*session_policy*/,
+    const void * /*req_opaque_data*/,
+    size_t /*req_opaque_data_size*/,
+    void * /*opaque_data*/,
+    size_t * /*opaque_data_size*/)
+{
+    return false;
+}
+
+bool libspdm_finish_rsp_opaque_data(
+    void * /*spdm_context*/,
+    uint32_t /*session_id*/,
+    spdm_version_number_t /*spdm_version*/,
+    uint8_t /*req_slot_id*/,
+    const void * /*req_opaque_data*/,
+    size_t /*req_opaque_data_size*/,
+    void * /*opaque_data*/,
+    size_t * /*opaque_data_size*/)
+{
+    return false;
+}
+#endif
+
+#if LIBSPDM_ENABLE_CAPABILITY_PSK_CAP
+bool libspdm_psk_finish_rsp_opaque_data(
+    void * /*spdm_context*/,
+    uint32_t /*session_id*/,
+    spdm_version_number_t /*spdm_version*/,
+    const void * /*req_opaque_data*/,
+    size_t /*req_opaque_data_size*/,
+    void * /*opaque_data*/,
+    size_t * /*opaque_data_size*/)
+{
+    return false;
+}
+
+bool libspdm_psk_exchange_rsp_opaque_data(
+    void * /*spdm_context*/,
+    const void * /*psk_hint*/,
+    uint16_t /*psk_hint_size*/,
+    spdm_version_number_t /*spdm_version*/,
+    uint8_t /*measurement_hash_type*/,
+    const void * /*req_opaque_data*/,
+    size_t /*req_opaque_data_size*/,
+    void * /*opaque_data*/,
+    size_t * /*opaque_data_size*/)
+{
+    return false;
+}
+#endif
+
 }
 
 // NOLINTEND(readability-function-size)
