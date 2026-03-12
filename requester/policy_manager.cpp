@@ -4,6 +4,7 @@
 
 #include <nlohmann/json.hpp>
 #include <sdbusplus/async/fdio.hpp>
+#include <phosphor-logging/lg2.hpp>
 #include <xyz/openbmc_project/Control/Security/SPDM/Policy/server.hpp>
 
 #include <expected>

@@ -172,18 +172,53 @@ int main()
 
     std::vector<std::unique_ptr<spdm::SPDMDBusResponder>> responders;
 
+    // Storage for discovered devices to process later if policy changes
+    std::vector<spdm::ResponderInfo> discoveredDevices;
+
     // Perform discovery
-    discovery.discover(
-        [&responders, &ctx](std::vector<spdm::ResponderInfo> devices) {
-            processDiscoveredDevices(devices, responders, ctx);
-        });
+    discovery.discover([&discoveredDevices, &responders, &ctx, &policyManager](
+                           std::vector<spdm::ResponderInfo> devices) {
+        // Store discovered devices for potential later processing
+        discoveredDevices = std::move(devices);
+
+        // Only process devices if SpdmEnabled policy is true
+        if (policyManager.enabled())
+        {
+            info("SpdmEnabled policy is true, processing discovered devices");
+            processDiscoveredDevices(discoveredDevices, responders, ctx);
+        }
+        else
+        {
+            info(
+                "SpdmEnabled policy is false, deferring device processing until policy is enabled");
+        }
+    });
+
+    // Register callback to process devices when SpdmEnabled changes from false
+    // to true
+    policyManager.registerEnabledChangeCallback([&discoveredDevices,
+                                                 &responders,
+                                                 &ctx](bool oldValue,
+                                                       bool newValue) {
+        // If policy changed from false to true, process the discovered devices
+        if (!oldValue && newValue)
+        {
+            info(
+                "SpdmEnabled policy changed from false to true, processing discovered devices");
+            processDiscoveredDevices(discoveredDevices, responders, ctx);
+        }
+        else if (oldValue && !newValue)
+        {
+            info("SpdmEnabled policy changed from true to false");
+        }
+    });
 
     info("SPDM daemon running, entering event loop");
 
     // Run the sdbusplus async context for parallel coroutine execution
     ctx.run();
 
-     // Cleanup
+    // Cleanup
     gCtx = nullptr;
     responders.clear();
 

@@ -89,6 +89,8 @@ spdmd_src = [
     'requester/policy_manager.hpp',
 ]
 
+policy_cache_path = get_option('localstatedir') + '/lib/spdm/policy.json'
+
 spdmd_includes = include_directories('requester')
 executable(
     'spdmd',
@@ -118,4 +120,3 @@ if get_option('coverage')
     )
 endif
 
-policy_cache_path = get_option('localstatedir') + '/lib/spdm/policy.json'

@@ -6,6 +6,7 @@
 
 #include <exception>
 #include <expected>
+#include <functional>
 #include <utility>
 
 class PolicyManager :
@@ -13,6 +14,9 @@ class PolicyManager :
         Policy<PolicyManager>
 {
   public:
+    using EnabledChangeCallback =
+        std::function<void(bool oldValue, bool newValue)>;
+
     explicit PolicyManager(sdbusplus::async::context& ctx, auto path) :
         sdbusplus::aserver::xyz::openbmc_project::control::security::spdm::
             Policy<PolicyManager>(ctx, path)
@@ -29,7 +33,15 @@ class PolicyManager :
 
     auto set_property(enabled_t, auto enabled) -> bool
     {
+        bool oldValue = enabled_;
         std::swap(enabled_, enabled);
+
+        // Notify callback if value changed
+        if (enabled_ != oldValue && enabledChangeCallback_)
+        {
+            enabledChangeCallback_(oldValue, enabled_);
+        }
+
         return enabled_ == enabled;
     }
 
@@ -44,9 +56,16 @@ class PolicyManager :
         return secure_session_enabled == secure_session_enabled_;
     }
 
+    // Register callback for SpdmEnabled property changes
+    void registerEnabledChangeCallback(EnabledChangeCallback callback)
+    {
+        enabledChangeCallback_ = std::move(callback);
+    }
+
   private:
     nlohmann::json config;
     const std::filesystem::path cache_path = POLICY_CACHE_PATH;
+    EnabledChangeCallback enabledChangeCallback_;
 
     auto read_cache() -> std::expected<void, std::exception>;
 };

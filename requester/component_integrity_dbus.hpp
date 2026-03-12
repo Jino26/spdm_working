@@ -163,7 +163,6 @@ class ComponentIntegrity :
     void checkForDuplicateIndices(
         const std::vector<size_t>& measurementIndices);
 
-
     /**
      * @brief Get certificate digests from SPDM device
      * @return Tuple of (slotMask, digestBuffer, totalDigestSize)

@@ -12,6 +12,7 @@ extern "C"
 
 #include <algorithm>
 #include <cstring>
+#include <format>
 #include <stdexcept>
 
 #define DEBUG 1
@@ -229,14 +230,14 @@ libspdm_return_t SpdmTcpTransport::deviceSendMessage(
         if (tcpMessage.size() >= 12)
         {
             lg2::info(
-                "TCP send header: cmd={CMD:02X} {C1:02X} {C2:02X} {C3:02X} "
-                "type={T0:02X} {T1:02X} {T2:02X} {T3:02X} "
-                "size={S0:02X} {S1:02X} {S2:02X} {S3:02X}",
-                "CMD", tcpMessage[0], "C1", tcpMessage[1], "C2", tcpMessage[2],
-                "C3", tcpMessage[3], "T0", tcpMessage[4], "T1", tcpMessage[5],
-                "T2", tcpMessage[6], "T3", tcpMessage[7], "S0", tcpMessage[8],
-                "S1", tcpMessage[9], "S2", tcpMessage[10], "S3",
-                tcpMessage[11]);
+                "TCP send header: cmd={HDR}",
+                "HDR",
+                std::format(
+                    "{:02X} {:02X} {:02X} {:02X} type={:02X} {:02X} {:02X} {:02X} size={:02X} {:02X} {:02X} {:02X}",
+                    tcpMessage[0], tcpMessage[1], tcpMessage[2],
+                    tcpMessage[3], tcpMessage[4], tcpMessage[5],
+                    tcpMessage[6], tcpMessage[7], tcpMessage[8],
+                    tcpMessage[9], tcpMessage[10], tcpMessage[11]));
         }
 #endif
 
@@ -291,14 +292,14 @@ libspdm_return_t SpdmTcpTransport::deviceReceiveMessage(
         if (tcpMessage.size() >= 12)
         {
             lg2::info(
-                "TCP recv header: cmd={CMD:02X} {C1:02X} {C2:02X} {C3:02X} "
-                "type={T0:02X} {T1:02X} {T2:02X} {T3:02X} "
-                "size={S0:02X} {S1:02X} {S2:02X} {S3:02X}",
-                "CMD", tcpMessage[0], "C1", tcpMessage[1], "C2", tcpMessage[2],
-                "C3", tcpMessage[3], "T0", tcpMessage[4], "T1", tcpMessage[5],
-                "T2", tcpMessage[6], "T3", tcpMessage[7], "S0", tcpMessage[8],
-                "S1", tcpMessage[9], "S2", tcpMessage[10], "S3",
-                tcpMessage[11]);
+                "TCP recv header: cmd={HDR}",
+                "HDR",
+                std::format(
+                    "{:02X} {:02X} {:02X} {:02X} type={:02X} {:02X} {:02X} {:02X} size={:02X} {:02X} {:02X} {:02X}",
+                    tcpMessage[0], tcpMessage[1], tcpMessage[2],
+                    tcpMessage[3], tcpMessage[4], tcpMessage[5],
+                    tcpMessage[6], tcpMessage[7], tcpMessage[8],
+                    tcpMessage[9], tcpMessage[10], tcpMessage[11]));
         }
 #endif
 

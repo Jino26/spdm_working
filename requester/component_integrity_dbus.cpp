@@ -8,8 +8,8 @@
 
 extern "C"
 {
-#include "library/spdm_lib_config.h"
 #include "library/spdm_common_lib.h"
+#include "library/spdm_lib_config.h"
 #include "library/spdm_requester_lib.h"
 #include "library/spdm_return_status.h"
 }
