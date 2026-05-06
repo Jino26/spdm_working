@@ -87,6 +87,8 @@ spdmd_src = [
     'requester/libspdm_tcp_transport.cpp',
     'requester/policy_manager.cpp',
     'requester/policy_manager.hpp',
+    'requester/spdm_session_config.cpp',
+    'requester/spdm_session.cpp',
 ]
 
 policy_cache_path = get_option('localstatedir') + '/lib/spdm/policy.json'

@@ -16,6 +16,8 @@ class PolicyManager :
   public:
     using EnabledChangeCallback =
         std::function<void(bool oldValue, bool newValue)>;
+    using SecureSessionEnabledChangeCallback =
+        std::function<void(bool oldValue, bool newValue)>;
 
     explicit PolicyManager(sdbusplus::async::context& ctx, auto path) :
         sdbusplus::aserver::xyz::openbmc_project::control::security::spdm::
@@ -52,7 +54,17 @@ class PolicyManager :
 
     auto set_property(secure_session_enabled_t, auto secure_session_enabled)
     {
+        bool oldValue = secure_session_enabled_;
         std::swap(secure_session_enabled_, secure_session_enabled);
+
+        // Notify callback if value changed
+        if (secure_session_enabled_ != oldValue &&
+            secureSessionEnabledChangeCallback_)
+        {
+            secureSessionEnabledChangeCallback_(oldValue,
+                                                secure_session_enabled_);
+        }
+
         return secure_session_enabled == secure_session_enabled_;
     }
 
@@ -62,10 +74,18 @@ class PolicyManager :
         enabledChangeCallback_ = std::move(callback);
     }
 
+    // Register callback for SecureSessionEnabled property changes
+    void registerSecureSessionEnabledChangeCallback(
+        SecureSessionEnabledChangeCallback callback)
+    {
+        secureSessionEnabledChangeCallback_ = std::move(callback);
+    }
+
   private:
     nlohmann::json config;
     const std::filesystem::path cache_path = POLICY_CACHE_PATH;
     EnabledChangeCallback enabledChangeCallback_;
+    SecureSessionEnabledChangeCallback secureSessionEnabledChangeCallback_;
 
     auto read_cache() -> std::expected<void, std::exception>;
 };

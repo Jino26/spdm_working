@@ -7,6 +7,7 @@
 #include "policy_manager.hpp"
 #include "spdm_dbus_responder.hpp"
 #include "spdm_discovery.hpp"
+#include "spdm_session_config.hpp"
 #include "tcp_transport_discovery.hpp"
 
 #include <phosphor-logging/lg2.hpp>
@@ -51,23 +52,55 @@ void setupSignalHandlers(sdbusplus::async::context& ctx)
 }
 
 /**
+ * @brief Close any active sessions and drop all responders.
+ * @details Used both for policy-driven shutdown and as the first step in
+ *          processDiscoveredDevices() so that a re-process is an authoritative
+ *          replace rather than an append.
+ */
+static void tearDownResponders(
+    std::vector<std::unique_ptr<spdm::SPDMDBusResponder>>& responders)
+{
+    for (const auto& r : responders)
+    {
+        if (r->secureSessionActive())
+        {
+            if (LIBSPDM_STATUS_IS_ERROR(r->closeSecureSession()))
+            {
+                warning("closeSecureSession failed for {DEVICE}", "DEVICE",
+                        r->deviceName);
+            }
+        }
+    }
+    responders.clear();
+}
+
+/**
  * @brief Process discovered SPDM devices and create responders
  * @param devices Vector of discovered SPDM devices
  * @param responders Vector to store created responders
  * @param ctx Async context for D-Bus operations
+ * @param sessionCfg Secure-session configuration to apply to each device
+ * @param secureSessionEnabled Whether to open a secure session per responder
  */
 void processDiscoveredDevices(
     const std::vector<spdm::ResponderInfo>& devices,
     std::vector<std::unique_ptr<spdm::SPDMDBusResponder>>& responders,
-    sdbusplus::async::context& ctx)
+    sdbusplus::async::context& ctx,
+    const spdm::SecureSessionConfig& sessionCfg, bool secureSessionEnabled)
 {
+    // Drop any previous responders before creating new
+    // ones for the latest discovered set.
+    tearDownResponders(responders);
+
     if (devices.empty())
     {
         error("No SPDM devices found");
         return;
     }
 
-    info("Processing {COUNT} discovered SPDM devices", "COUNT", devices.size());
+    info(
+        "Processing {COUNT} discovered SPDM devices (secure-session={SECURE})",
+        "COUNT", devices.size(), "SECURE", secureSessionEnabled);
 
     // Process discovered devices
     for (const auto& device : devices)
@@ -96,6 +129,19 @@ void processDiscoveredDevices(
                 }
                 info("Transport initialized successfully for device {PATH}",
                      "PATH", device.objectPath);
+
+                // Always advertise KEY_EX caps so that runtime flips of
+                // SecureSessionEnabled can open/close sessions without a
+                // full re-init. Cert load and session establishment remain
+                // gated on the policy.
+                if (LIBSPDM_STATUS_IS_ERROR(spdm::applySecureSessionConfig(
+                        *device.transport, sessionCfg)))
+                {
+                    error(
+                        "Failed to apply secure-session config for device {PATH}",
+                        "PATH", device.objectPath);
+                    continue;
+                }
             }
             else
             {
@@ -111,6 +157,16 @@ void processDiscoveredDevices(
             // context for parallel execution
             auto responder =
                 std::make_unique<spdm::SPDMDBusResponder>(device, ctx);
+
+            if (device.transport && secureSessionEnabled)
+            {
+                if (LIBSPDM_STATUS_IS_ERROR(
+                        responder->openSecureSession(sessionCfg)))
+                {
+                    error("Secure session not opened for device {PATH}", "PATH",
+                          device.objectPath);
+                }
+            }
 
             responders.push_back(std::move(responder));
             info("Successfully created responder for device {PATH}", "PATH",
@@ -175,9 +231,13 @@ int main()
     // Storage for discovered devices to process later if policy changes
     std::vector<spdm::ResponderInfo> discoveredDevices;
 
+    // Common secure-session config
+    spdm::SecureSessionConfig sessionCfg{};
+    sessionCfg.peerRootCertBaseDir = "/usr/share/spdm-emu";
+
     // Perform discovery
-    discovery.discover([&discoveredDevices, &responders, &ctx, &policyManager](
-                           std::vector<spdm::ResponderInfo> devices) {
+    discovery.discover([&discoveredDevices, &responders, &ctx, &policyManager,
+                        &sessionCfg](std::vector<spdm::ResponderInfo> devices) {
         // Store discovered devices for potential later processing
         discoveredDevices = std::move(devices);
 
@@ -185,7 +245,9 @@ int main()
         if (policyManager.enabled())
         {
             info("SpdmEnabled policy is true, processing discovered devices");
-            processDiscoveredDevices(discoveredDevices, responders, ctx);
+            processDiscoveredDevices(discoveredDevices, responders, ctx,
+                                     sessionCfg,
+                                     policyManager.secure_session_enabled());
         }
         else
         {
@@ -196,22 +258,81 @@ int main()
 
     // Register callback to process devices when SpdmEnabled changes from false
     // to true
-    policyManager.registerEnabledChangeCallback([&discoveredDevices,
-                                                 &responders,
-                                                 &ctx](bool oldValue,
-                                                       bool newValue) {
-        // If policy changed from false to true, process the discovered devices
-        if (!oldValue && newValue)
-        {
-            info(
-                "SpdmEnabled policy changed from false to true, processing discovered devices");
-            processDiscoveredDevices(discoveredDevices, responders, ctx);
-        }
-        else if (oldValue && !newValue)
-        {
-            info("SpdmEnabled policy changed from true to false");
-        }
-    });
+    policyManager.registerEnabledChangeCallback(
+        [&discoveredDevices, &responders, &ctx, &policyManager, &sessionCfg](
+            bool oldValue, bool newValue) {
+            // If policy changed from false to true, process the discovered
+            // devices
+            if (!oldValue && newValue)
+            {
+                info(
+                    "SpdmEnabled policy changed from false to true, processing discovered devices");
+                processDiscoveredDevices(
+                    discoveredDevices, responders, ctx, sessionCfg,
+                    policyManager.secure_session_enabled());
+            }
+            else if (oldValue && !newValue)
+            {
+                info(
+                    "SpdmEnabled policy changed from true to false, tearing down responders");
+                tearDownResponders(responders);
+            }
+        });
+
+    // Register callback for runtime SecureSessionEnabled flips while
+    // Enabled=true. KEY_EX caps were already advertised at responder creation,
+    // so we can open / close sessions on the fly without a full re-init.
+    policyManager.registerSecureSessionEnabledChangeCallback(
+        [&responders, &policyManager, &sessionCfg](bool oldValue,
+                                                   bool newValue) {
+            if (oldValue == newValue)
+            {
+                return;
+            }
+
+            if (!policyManager.enabled())
+            {
+                info(
+                    "SecureSessionEnabled changed but Enabled is false; will take effect when Enabled is true");
+                return;
+            }
+
+            if (!oldValue && newValue)
+            {
+                info(
+                    "SecureSessionEnabled changed from false to true, opening sessions");
+                for (const auto& r : responders)
+                {
+                    if (!r->secureSessionActive())
+                    {
+                        if (LIBSPDM_STATUS_IS_ERROR(
+                                r->openSecureSession(sessionCfg)))
+                        {
+                            warning(
+                                "Runtime openSecureSession failed for {DEVICE}",
+                                "DEVICE", r->deviceName);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                info(
+                    "SecureSessionEnabled changed from true to false, closing sessions");
+                for (const auto& r : responders)
+                {
+                    if (r->secureSessionActive())
+                    {
+                        if (LIBSPDM_STATUS_IS_ERROR(r->closeSecureSession()))
+                        {
+                            warning(
+                                "Runtime closeSecureSession failed for {DEVICE}",
+                                "DEVICE", r->deviceName);
+                        }
+                    }
+                }
+            }
+        });
 
     info("SPDM daemon running, entering event loop");
 
