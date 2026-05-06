@@ -166,6 +166,20 @@ void processDiscoveredDevices(
                     error("Secure session not opened for device {PATH}", "PATH",
                           device.objectPath);
                 }
+                else
+                {
+                    // Send heartbeat immediately after session establishment
+                    if (LIBSPDM_STATUS_IS_ERROR(responder->sendHeartbeat()))
+                    {
+                        warning("Initial heartbeat failed for device {PATH}",
+                                "PATH", device.objectPath);
+                    }
+                    else
+                    {
+                        info("Initial heartbeat sent successfully for device {PATH}",
+                             "PATH", device.objectPath);
+                    }
+                }
             }
 
             responders.push_back(std::move(responder));
@@ -311,6 +325,20 @@ int main()
                             warning(
                                 "Runtime openSecureSession failed for {DEVICE}",
                                 "DEVICE", r->deviceName);
+                        }
+                        else
+                        {
+                            // Send heartbeat immediately after session establishment
+                            if (LIBSPDM_STATUS_IS_ERROR(r->sendHeartbeat()))
+                            {
+                                warning("Initial heartbeat failed for {DEVICE}",
+                                        "DEVICE", r->deviceName);
+                            }
+                            else
+                            {
+                                info("Initial heartbeat sent successfully for {DEVICE}",
+                                     "DEVICE", r->deviceName);
+                            }
                         }
                     }
                 }

@@ -65,6 +65,9 @@ class SPDMDBusResponder
     /** @brief Tear down the secure session. */
     libspdm_return_t closeSecureSession();
 
+    /** @brief Send a heartbeat message over the secure session. */
+    libspdm_return_t sendHeartbeat();
+
     /** @brief True if a secure session is currently open. */
     bool secureSessionActive() const
     {

@@ -84,4 +84,15 @@ libspdm_return_t SPDMDBusResponder::closeSecureSession()
     return session->stop();
 }
 
+libspdm_return_t SPDMDBusResponder::sendHeartbeat()
+{
+    if (!session || !session->active())
+    {
+        error("sendHeartbeat: no active session for {DEVICE}", "DEVICE",
+              deviceName);
+        return LIBSPDM_STATUS_INVALID_STATE_LOCAL;
+    }
+    return session->heartbeat();
+}
+
 } // namespace spdm
