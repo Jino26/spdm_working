@@ -72,7 +72,7 @@ auto MCTPTransportDiscovery::discovery(SPDMDiscovery& discovery)
                                  .properties();
             uuid = uuidProps.uuid;
         }
-        catch (const sdbusplus::exception::exception& e)
+        catch (const sdbusplus::exception_t& e)
         {
             debug("UUID unavailable for {PATH}; proceeding EID-only: {ERR}",
                   "PATH", path, "ERR", e);
