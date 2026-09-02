@@ -50,6 +50,9 @@ int main(int argc, char* argv[])
     sessionCfg.peerRootCertBaseDir = "/usr/share/spdm-emu";
     // Same sample-key tree: the requester's own signing key for mutual auth.
     setRequesterKeyBaseDir(sessionCfg.peerRootCertBaseDir);
+    // Additional trust anchors, e.g. a CA exported from the TPM. Populated
+    // out of band (see docs); a missing directory is simply ignored.
+    sessionCfg.peerRootCertTrustDir = paths::trust_store().string();
     sessionCfg.verifyCertificate = policyManager.verify_certificate();
 
     SPDMDiscovery discovery{};

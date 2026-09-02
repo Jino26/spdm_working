@@ -30,4 +30,10 @@ auto policy_cache() -> std::filesystem::path
     return cache;
 }
 
+auto trust_store() -> std::filesystem::path
+{
+    static const auto dir = state_dir() / "trust";
+    return dir;
+}
+
 } // namespace spdm::paths

@@ -60,6 +60,14 @@ struct SecureSessionConfig
     std::string peerRootCertBaseDir;
     std::string peerRootCertFileName = "ca.cert.der";
 
+    /// Directory of additional DER trust anchors. Every regular file in it is
+    /// installed alongside whatever the precedence chain above resolved, up to
+    /// libspdm's LIBSPDM_MAX_ROOT_CERT_SUPPORT entries. This is how a
+    /// responder with a CA of its own — a TPM-provisioned one, say — is
+    /// trusted without displacing the sample-key CA that a DEVICE=sample
+    /// responder still presents. Empty or missing directory: nothing added.
+    std::string peerRootCertTrustDir;
+
     /// File name of the requester's (local) cert chain, resolved as
     /// <peerRootCertBaseDir>/<algoSubdir(negotiated req asym algo)>/<file>.
     /// An empty peerRootCertBaseDir disables local-chain provisioning.

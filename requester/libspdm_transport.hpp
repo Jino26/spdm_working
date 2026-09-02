@@ -130,8 +130,12 @@ class SpdmTransport
      *         LIBSPDM_DATA_LOCAL_PUBLIC_CERT_CHAIN). libspdm stores the raw
      *         pointers without copying, so these must outlive spdmContext —
      *         hence they are declared before it (members are destroyed in
-     *         reverse declaration order). */
-    std::vector<uint8_t> peerRootCertStorage;
+     *         reverse declaration order).
+     *
+     *         peerRootCertStorage holds one entry per trust anchor and must
+     *         never be resized after provisioning: libspdm points at each
+     *         element's buffer. */
+    std::vector<std::vector<uint8_t>> peerRootCertStorage;
     std::vector<uint8_t> localCertChainBlob;
 
     /** @brief Opaque libspdm context — owns the memory and calls

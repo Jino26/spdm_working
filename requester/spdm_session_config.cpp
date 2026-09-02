@@ -5,12 +5,14 @@
 
 #include <phosphor-logging/lg2.hpp>
 
+#include <algorithm>
 #include <filesystem>
 #include <format>
 #include <fstream>
 #include <iterator>
 #include <optional>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -117,6 +119,55 @@ uint32_t getNegotiatedAsymAlgo(void* ctx)
         return 0;
     }
     return algo;
+}
+
+/// Load every regular file in the trust-store directory as a DER anchor.
+/// A missing directory is not an error: the store is optional and may be
+/// populated after first boot (by TPM provisioning, for instance).
+std::vector<CertLoadResult> loadTrustStore(const std::string& dir)
+{
+    namespace fs = std::filesystem;
+
+    std::vector<CertLoadResult> anchors;
+    if (dir.empty())
+    {
+        return anchors;
+    }
+
+    std::error_code ec;
+    fs::directory_iterator it(dir, ec);
+    if (ec)
+    {
+        lg2::debug("No peer trust store at {PATH}: {ERROR}", "PATH", dir,
+                   "ERROR", ec.message());
+        return anchors;
+    }
+
+    // Sorted so provisioning order is stable across boots; libspdm walks the
+    // anchors in the order they were installed.
+    std::vector<fs::path> files;
+    for (const fs::directory_entry& entry : it)
+    {
+        if (entry.is_regular_file(ec))
+        {
+            files.push_back(entry.path());
+        }
+    }
+    std::ranges::sort(files);
+
+    for (const fs::path& file : files)
+    {
+        std::vector<uint8_t> data = readFile(file.string());
+        if (data.empty())
+        {
+            lg2::error("Skipping unreadable trust anchor {PATH}", "PATH",
+                       file.string());
+            continue;
+        }
+        anchors.push_back(CertLoadResult{std::move(data), file.string()});
+    }
+
+    return anchors;
 }
 
 std::optional<CertLoadResult> loadPeerRootCert(void* ctx,
@@ -284,24 +335,29 @@ libspdm_return_t installPeerRootCert(SpdmTransport& transport,
         return LIBSPDM_STATUS_SUCCESS;
     }
 
-    std::optional<CertLoadResult> certResult = loadPeerRootCert(ctx, cfg);
+    std::vector<CertLoadResult> anchors;
 
-    // Handle "no configuration" case
-    if (!certResult)
+    if (std::optional<CertLoadResult> certResult = loadPeerRootCert(ctx, cfg))
     {
-        // Check if any configuration was attempted
-        const bool configAttempted =
-            !cfg.peerRootCertDer.empty() || !cfg.peerRootCertDerPath.empty() ||
-            !cfg.peerRootCertBaseDir.empty();
+        anchors.push_back(std::move(*certResult));
+    }
+    else if (!cfg.peerRootCertDer.empty() || !cfg.peerRootCertDerPath.empty() ||
+             !cfg.peerRootCertBaseDir.empty())
+    {
+        // A source was configured but failed to load (already logged).
+        return LIBSPDM_STATUS_INVALID_PARAMETER;
+    }
 
-        if (configAttempted)
-        {
-            // Configuration was provided but loading failed (error already
-            // logged)
-            return LIBSPDM_STATUS_INVALID_PARAMETER;
-        }
+    // Anchors from the trust store are additive: a responder presenting a
+    // TPM-provisioned CA and one presenting the sample-key CA can both be
+    // verified by the same daemon.
+    for (CertLoadResult& anchor : loadTrustStore(cfg.peerRootCertTrustDir))
+    {
+        anchors.push_back(std::move(anchor));
+    }
 
-        // No configuration provided - warn if KEY_EX capability is enabled
+    if (anchors.empty())
+    {
         if (cfg.requesterCapFlags &
             SPDM_GET_CAPABILITIES_REQUEST_FLAGS_KEY_EX_CAP)
         {
@@ -311,26 +367,43 @@ libspdm_return_t installPeerRootCert(SpdmTransport& transport,
         return LIBSPDM_STATUS_SUCCESS;
     }
 
-    // Take ownership of the bytes before handing libspdm the pointer.
-    transport.peerRootCertStorage = std::move(certResult->data);
-
-    libspdm_data_parameter_t p{};
-    p.location = LIBSPDM_DATA_LOCATION_LOCAL;
-    const libspdm_return_t st =
-        libspdm_set_data(ctx, LIBSPDM_DATA_PEER_PUBLIC_ROOT_CERT, &p,
-                         transport.peerRootCertStorage.data(),
-                         transport.peerRootCertStorage.size());
-
-    if (LIBSPDM_STATUS_IS_ERROR(st))
+    if (anchors.size() > LIBSPDM_MAX_ROOT_CERT_SUPPORT)
     {
-        transport.peerRootCertStorage.clear();
-        lg2::error("set_data PEER_PUBLIC_ROOT_CERT failed: {STATUS}", "STATUS",
-                   std::format("0x{:08X}", static_cast<uint32_t>(st)));
-        return st;
+        lg2::error(
+            "{COUNT} trust anchors configured but libspdm accepts at most {MAX}",
+            "COUNT", anchors.size(), "MAX",
+            static_cast<size_t>(LIBSPDM_MAX_ROOT_CERT_SUPPORT));
+        return LIBSPDM_STATUS_INVALID_PARAMETER;
     }
 
-    lg2::info("Installed peer root cert from {SOURCE} ({SIZE} bytes)", "SOURCE",
-              certResult->source, "SIZE", transport.peerRootCertStorage.size());
+    // Reserve before taking any pointer: libspdm keeps a raw pointer into each
+    // element, so a reallocation mid-loop would dangle the earlier entries.
+    transport.peerRootCertStorage.reserve(anchors.size());
+
+    for (CertLoadResult& anchor : anchors)
+    {
+        transport.peerRootCertStorage.push_back(std::move(anchor.data));
+        const std::vector<uint8_t>& stored =
+            transport.peerRootCertStorage.back();
+
+        libspdm_data_parameter_t p{};
+        p.location = LIBSPDM_DATA_LOCATION_LOCAL;
+        const libspdm_return_t st =
+            libspdm_set_data(ctx, LIBSPDM_DATA_PEER_PUBLIC_ROOT_CERT, &p,
+                             stored.data(), stored.size());
+        if (LIBSPDM_STATUS_IS_ERROR(st))
+        {
+            transport.peerRootCertStorage.clear();
+            lg2::error(
+                "set_data PEER_PUBLIC_ROOT_CERT failed for {SOURCE}: {STATUS}",
+                "SOURCE", anchor.source, "STATUS",
+                std::format("0x{:08X}", static_cast<uint32_t>(st)));
+            return st;
+        }
+
+        lg2::info("Installed peer root cert from {SOURCE} ({SIZE} bytes)",
+                  "SOURCE", anchor.source, "SIZE", stored.size());
+    }
 
     return LIBSPDM_STATUS_SUCCESS;
 }
