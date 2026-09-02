@@ -80,6 +80,11 @@ class PolicyManager final :
         return this->properties.secure_session_enabled;
     }
 
+    bool verify_certificate() const
+    {
+        return this->properties.verify_certificate;
+    }
+
     auto set_property(Policy::enabled_t, auto&& value) -> bool
     {
         bool old = this->properties.enabled;

@@ -160,14 +160,17 @@ libspdm_return_t SPDMDBusResponder::openSecureSession(
 
     if (!session)
     {
-        session = std::make_unique<SpdmSession>(*transport);
+        session =
+            std::make_unique<SpdmSession>(*transport, cfg.verifyCertificate);
     }
     if (session->active())
     {
         return LIBSPDM_STATUS_SUCCESS;
     }
     auto st = session->start(slotId);
-    if (LIBSPDM_STATUS_IS_ERROR(st))
+    // Not LIBSPDM_STATUS_IS_ERROR: a refused trust anchor arrives as
+    // warning-severity LIBSPDM_STATUS_VERIF_NO_AUTHORITY.
+    if (st != LIBSPDM_STATUS_SUCCESS)
     {
         error("Secure session start failed for {DEVICE}: {STATUS}", "DEVICE",
               deviceName, "STATUS",

@@ -26,7 +26,15 @@ namespace spdm
 class SpdmSession
 {
   public:
-    explicit SpdmSession(SpdmTransport& t) : transport(t) {}
+    /**
+     * @param t                 transport owning the libspdm context.
+     * @param verifyCertificate refuse to start the session when the
+     *                          responder's cert chain does not chain to a
+     *                          provisioned trust anchor.
+     */
+    explicit SpdmSession(SpdmTransport& t, bool verifyCertificate = true) :
+        transport(t), verifyCert(verifyCertificate)
+    {}
 
     SpdmSession(const SpdmSession&) = delete;
     SpdmSession& operator=(const SpdmSession&) = delete;
@@ -86,6 +94,7 @@ class SpdmSession
     uint32_t id = 0;
     uint8_t hbPeriod = 0;
     bool isActive = false;
+    bool verifyCert = true;
 };
 
 } // namespace spdm

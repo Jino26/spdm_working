@@ -50,6 +50,7 @@ int main(int argc, char* argv[])
     sessionCfg.peerRootCertBaseDir = "/usr/share/spdm-emu";
     // Same sample-key tree: the requester's own signing key for mutual auth.
     setRequesterKeyBaseDir(sessionCfg.peerRootCertBaseDir);
+    sessionCfg.verifyCertificate = policyManager.verify_certificate();
 
     SPDMDiscovery discovery{};
 
@@ -77,8 +78,10 @@ int main(int argc, char* argv[])
             }
             else if (policyManager.secure_session_enabled())
             {
-                if (LIBSPDM_STATUS_IS_ERROR(
-                        responder->openSecureSession(sessionCfg)))
+                // Not LIBSPDM_STATUS_IS_ERROR: a refused trust anchor arrives
+                // as warning-severity LIBSPDM_STATUS_VERIF_NO_AUTHORITY.
+                if (responder->openSecureSession(sessionCfg) !=
+                    LIBSPDM_STATUS_SUCCESS)
                 {
                     lg2::error("Secure session not opened for device {PATH}",
                                "PATH", device.path);
@@ -133,8 +136,11 @@ int main(int argc, char* argv[])
             {
                 if (!r->secureSessionActive())
                 {
-                    if (LIBSPDM_STATUS_IS_ERROR(
-                            r->openSecureSession(sessionCfg)))
+                    // Not LIBSPDM_STATUS_IS_ERROR: a refused trust anchor
+                    // arrives as warning-severity
+                    // LIBSPDM_STATUS_VERIF_NO_AUTHORITY.
+                    if (r->openSecureSession(sessionCfg) !=
+                        LIBSPDM_STATUS_SUCCESS)
                     {
                         lg2::warning(
                             "Runtime openSecureSession failed for {DEVICE}",

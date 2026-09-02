@@ -20,7 +20,7 @@ namespace
  * libspdm_start_session in cert-based KEY_EX mode — without it, libspdm
  * fails the local pre-flight check and never sends KEY_EXCHANGE.
  */
-libspdm_return_t fetchPeerCert(void* ctx, uint8_t slotId)
+libspdm_return_t fetchPeerCert(void* ctx, uint8_t slotId, bool verifyCert)
 {
     uint8_t slotMask = 0;
     uint8_t digestBuf[LIBSPDM_MAX_HASH_SIZE * SPDM_MAX_SLOT_COUNT] = {};
@@ -53,6 +53,26 @@ libspdm_return_t fetchPeerCert(void* ctx, uint8_t slotId)
                    std::format("0x{:08X}", static_cast<uint32_t>(st)));
         return st;
     }
+
+    // The chain parsed and its internal root hash checked out, but it chains
+    // to none of the provisioned trust anchors. libspdm reports this as
+    // warning severity, so LIBSPDM_STATUS_IS_ERROR above does not catch it —
+    // without this the daemon would establish a session against an endpoint
+    // it never authenticated.
+    if (st == LIBSPDM_STATUS_VERIF_NO_AUTHORITY)
+    {
+        if (verifyCert)
+        {
+            lg2::error(
+                "Responder cert chain for slot {SLOT} matches no trust anchor; refusing session. Provision the responder's CA, or clear the VerifyCertificate policy to override.",
+                "SLOT", static_cast<uint32_t>(slotId));
+            return st;
+        }
+        lg2::warning(
+            "Responder cert chain for slot {SLOT} matches no trust anchor; continuing because the VerifyCertificate policy is off. The responder is NOT authenticated.",
+            "SLOT", static_cast<uint32_t>(slotId));
+    }
+
     lg2::info("Fetched peer cert chain for slot {SLOT} ({SIZE} bytes)", "SLOT",
               static_cast<uint32_t>(slotId), "SIZE", certChainSize);
     return LIBSPDM_STATUS_SUCCESS;
@@ -85,8 +105,11 @@ libspdm_return_t SpdmSession::start(uint8_t slotId, uint8_t measHashType,
 
     if (!usePsk)
     {
-        libspdm_return_t st = fetchPeerCert(ctx, slotId);
-        if (LIBSPDM_STATUS_IS_ERROR(st))
+        libspdm_return_t st = fetchPeerCert(ctx, slotId, verifyCert);
+        // Not LIBSPDM_STATUS_IS_ERROR: fetchPeerCert reports a refused trust
+        // anchor as LIBSPDM_STATUS_VERIF_NO_AUTHORITY, which is warning
+        // severity and would otherwise fall through to KEY_EXCHANGE.
+        if (st != LIBSPDM_STATUS_SUCCESS)
         {
             return st;
         }

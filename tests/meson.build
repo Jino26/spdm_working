@@ -16,6 +16,7 @@ tests = [
     'test_policy_manager',
     'test_component_integrity',
     'test_certificate_dbus',
+    'test_peer_cert_verify',
 ]
 
 foreach t : tests

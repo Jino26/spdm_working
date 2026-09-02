@@ -66,6 +66,11 @@ struct SecureSessionConfig
     std::string localCertChainFileName = "bundle_requester.certchain.der";
     /// Bit mask of cert slots to provision the local chain into.
     uint8_t localCertSlotMask = 0x03; // slots 0 and 1
+
+    /// Refuse a session when the responder's cert chain does not chain to a
+    /// provisioned trust anchor. Mirrors the VerifyCertificate D-Bus policy
+    /// property; read at session-open time like the rest of this config.
+    bool verifyCertificate = true;
 };
 
 /**
