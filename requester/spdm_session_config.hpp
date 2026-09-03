@@ -25,11 +25,21 @@ struct SecureSessionConfig
         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_MAC_CAP |
         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_KEY_EX_CAP |
         SPDM_GET_CAPABILITIES_REQUEST_FLAGS_HBEAT_CAP |
-        SPDM_GET_CAPABILITIES_REQUEST_FLAGS_KEY_UPD_CAP;
+        SPDM_GET_CAPABILITIES_REQUEST_FLAGS_KEY_UPD_CAP |
+        SPDM_GET_CAPABILITIES_REQUEST_FLAGS_ENCAP_CAP |
+        SPDM_GET_CAPABILITIES_REQUEST_FLAGS_MUT_AUTH_CAP;
 
     uint16_t dheGroup = SPDM_ALGORITHMS_DHE_NAMED_GROUP_SECP_384_R1;
     uint16_t aeadCipher = SPDM_ALGORITHMS_AEAD_CIPHER_SUITE_AES_256_GCM;
-    uint16_t reqAsymAlg = SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSASSA_2048;
+    /// Bit mask of requester signing algorithms offered in
+    /// NEGOTIATE_ALGORITHMS; the responder picks one. Offering only a single
+    /// algorithm is a hard failure mode: if the responder's --req_asym has no
+    /// overlap and both ends advertise MUT_AUTH_CAP, libspdm fails the whole
+    /// connection with LIBSPDM_STATUS_NEGOTIATION_FAIL rather than just
+    /// skipping mutual auth. Both key sets ship in the sample-key tree.
+    uint16_t reqAsymAlg =
+        SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSASSA_2048 |
+        SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_ECDSA_ECC_NIST_P256;
     uint16_t keySchedule = SPDM_ALGORITHMS_KEY_SCHEDULE_SPDM;
     uint8_t otherParamsSupport = 0;
 
@@ -49,6 +59,13 @@ struct SecureSessionConfig
     std::string peerRootCertDerPath;
     std::string peerRootCertBaseDir;
     std::string peerRootCertFileName = "ca.cert.der";
+
+    /// File name of the requester's (local) cert chain, resolved as
+    /// <peerRootCertBaseDir>/<algoSubdir(negotiated req asym algo)>/<file>.
+    /// An empty peerRootCertBaseDir disables local-chain provisioning.
+    std::string localCertChainFileName = "bundle_requester.certchain.der";
+    /// Bit mask of cert slots to provision the local chain into.
+    uint8_t localCertSlotMask = 0x03; // slots 0 and 1
 };
 
 /**
@@ -69,5 +86,24 @@ libspdm_return_t applySecureSessionConfig(SpdmTransport& transport,
  */
 libspdm_return_t installPeerRootCert(SpdmTransport& transport,
                                      const SecureSessionConfig& cfg);
+
+/**
+ * Directory name (e.g. "ecp256") for a base asym algo, matching the
+ * spdm-emu sample-key layout. Returns nullptr for unknown algos.
+ */
+const char* asymAlgoSubdir(uint32_t baseAsymAlgo);
+
+/**
+ * Provision the requester's own cert chain so libspdm can answer the
+ * responder's encapsulated GET_DIGESTS / GET_CERTIFICATE during
+ * session-based mutual authentication.
+ *
+ * Requires libspdm_init_connection to have completed (the req asym algo is
+ * only negotiated by then). Returns LIBSPDM_STATUS_SUCCESS and does nothing
+ * if no base directory is configured, or if the responder negotiated no
+ * requester asym algo (mutual auth simply will not be requested).
+ */
+libspdm_return_t installLocalRequesterCertChain(SpdmTransport& transport,
+                                                const SecureSessionConfig& cfg);
 
 } // namespace spdm
