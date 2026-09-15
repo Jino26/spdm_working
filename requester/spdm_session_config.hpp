@@ -31,15 +31,7 @@ struct SecureSessionConfig
 
     uint16_t dheGroup = SPDM_ALGORITHMS_DHE_NAMED_GROUP_SECP_384_R1;
     uint16_t aeadCipher = SPDM_ALGORITHMS_AEAD_CIPHER_SUITE_AES_256_GCM;
-    /// Bit mask of requester signing algorithms offered in
-    /// NEGOTIATE_ALGORITHMS; the responder picks one. Offering only a single
-    /// algorithm is a hard failure mode: if the responder's --req_asym has no
-    /// overlap and both ends advertise MUT_AUTH_CAP, libspdm fails the whole
-    /// connection with LIBSPDM_STATUS_NEGOTIATION_FAIL rather than just
-    /// skipping mutual auth. Both key sets ship in the sample-key tree.
-    uint16_t reqAsymAlg =
-        SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSASSA_2048 |
-        SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_ECDSA_ECC_NIST_P256;
+    // Requester signing algorithms come from SpdmTransport::supportReqAsymAlgo.
     uint16_t keySchedule = SPDM_ALGORITHMS_KEY_SCHEDULE_SPDM;
     uint8_t otherParamsSupport = 0;
 
