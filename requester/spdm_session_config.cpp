@@ -285,8 +285,8 @@ libspdm_return_t applySecureSessionConfig(SpdmTransport& transport,
         return st;
     }
 
-    st = setDataAndCheck(ctx, LIBSPDM_DATA_REQ_BASE_ASYM_ALG, cfg.reqAsymAlg,
-                         "REQ_BASE_ASYM_ALG");
+    st = setDataAndCheck(ctx, LIBSPDM_DATA_REQ_BASE_ASYM_ALG,
+                         transport.supportReqAsymAlgo, "REQ_BASE_ASYM_ALG");
     if (LIBSPDM_STATUS_IS_ERROR(st))
     {
         return st;

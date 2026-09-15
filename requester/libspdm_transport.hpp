@@ -109,7 +109,13 @@ class SpdmTransport
         SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_ECDSA_ECC_NIST_P384 |
         SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_ECDSA_ECC_NIST_P521 |
         SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSASSA_2048;
-    /** @brief Supported asymmetric algorithms bitmask for the requester. */
+    /** @brief Supported asymmetric algorithms bitmask for the requester.
+     *  @details Offered in NEGOTIATE_ALGORITHMS; the responder picks one.
+     *           Offering only a single algorithm is a hard failure mode: if
+     *           the responder's --req_asym has no overlap and both ends
+     *           advertise MUT_AUTH_CAP, libspdm fails the whole connection
+     *           with LIBSPDM_STATUS_NEGOTIATION_FAIL rather than just skipping
+     *           mutual auth. Both key sets ship in the sample-key tree. */
     uint16_t supportReqAsymAlgo =
         SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSASSA_2048 |
         SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_ECDSA_ECC_NIST_P256;
