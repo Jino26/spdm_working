@@ -79,6 +79,16 @@ class ComponentIntegrity :
     }
 
     /**
+     * @brief Set whether a responder cert chain that matches no provisioned
+     * trust anchor is refused.
+     * @param verify Mirrors the VerifyCertificate policy property.
+     */
+    void setVerifyCertificate(bool verify)
+    {
+        verifyCert = verify;
+    }
+
+    /**
      * @brief Ensure the SPDM connection is negotiated (GET_VERSION /
      * CAPABILITIES / NEGOTIATE_ALGORITHMS).
      *
@@ -253,6 +263,9 @@ class ComponentIntegrity :
 
   private:
     std::shared_ptr<spdm::SpdmTransport> transport;
+
+    /** @brief Refuse cert chains that match no trust anchor */
+    bool verifyCert = true;
 
     /** @brief Async context for D-Bus operations */
     sdbusplus::async::context& asyncCtx;

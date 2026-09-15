@@ -689,6 +689,49 @@ TEST_F(ComponentIntegrityTest, GetCertificateSuccessTest)
     EXPECT_NE(pemChain.find("MIIBljCC"), std::string::npos);
 }
 
+// A chain that matches no trust anchor is refused while VerifyCertificate is
+// on (the default), and the responder is reported as not verified.
+TEST_F(ComponentIntegrityTest, GetCertificateNoAuthorityRefusedTest)
+{
+    using VerificationStatus = sdbusplus::common::xyz::openbmc_project::
+        attestation::IdentityAuthentication::VerificationStatus;
+    static uint8_t dummyContextBuffer[1024] = {};
+    reinterpret_cast<libspdm_context_t*>(dummyContextBuffer)
+        ->connection_info.algorithm.base_hash_algo =
+        SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA_384;
+    mockTransport->setSpdmContext(dummyContextBuffer);
+    mockTransport->getCertStatus = LIBSPDM_STATUS_VERIF_NO_AUTHORITY;
+    mockTransport->mockCertChain = makeMockSpdmCertChain();
+    mockTransport->setAsCurrentMock();
+    EXPECT_THROW(getCertificate(0), std::runtime_error);
+    EXPECT_EQ(componentIntegrity->responder_verification_status(),
+              VerificationStatus::Failed);
+}
+
+// With VerifyCertificate off the chain is still returned, but the responder
+// is reported as not verified.
+TEST_F(ComponentIntegrityTest, GetCertificateNoAuthorityAllowedTest)
+{
+    using VerificationStatus = sdbusplus::common::xyz::openbmc_project::
+        attestation::IdentityAuthentication::VerificationStatus;
+    static uint8_t dummyContextBuffer[1024] = {};
+    reinterpret_cast<libspdm_context_t*>(dummyContextBuffer)
+        ->connection_info.algorithm.base_hash_algo =
+        SPDM_ALGORITHMS_BASE_HASH_ALGO_TPM_ALG_SHA_384;
+    mockTransport->setSpdmContext(dummyContextBuffer);
+    mockTransport->getCertStatus = LIBSPDM_STATUS_VERIF_NO_AUTHORITY;
+    mockTransport->mockCertChain = makeMockSpdmCertChain();
+    mockTransport->setAsCurrentMock();
+    componentIntegrity->setVerifyCertificate(false);
+
+    auto [pemChain, rawBytes, leafCert] = getCertificate(0);
+
+    EXPECT_NE(pemChain.find("-----BEGIN CERTIFICATE-----"), std::string::npos);
+    EXPECT_EQ(rawBytes, mockTransport->mockCertChain);
+    EXPECT_EQ(componentIntegrity->responder_verification_status(),
+              VerificationStatus::Failed);
+}
+
 // Test getCertificate with multiple DER certs in chain and check PEM base64
 // content
 TEST_F(ComponentIntegrityTest, GetCertificateMultipleDerCertsTest)

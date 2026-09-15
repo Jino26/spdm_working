@@ -105,6 +105,10 @@ std::string SPDMDBusResponder::name() const
 libspdm_return_t SPDMDBusResponder::applySessionConfig(
     const SecureSessionConfig& cfg)
 {
+    // The ComponentIntegrity certificate path fetches the chain on its own,
+    // outside the secure session, so it needs the same policy.
+    componentIntegrity->setVerifyCertificate(cfg.verifyCertificate);
+
     if (!transport)
     {
         return LIBSPDM_STATUS_SUCCESS; // No transport, nothing to configure

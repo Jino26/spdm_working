@@ -511,7 +511,28 @@ std::tuple<std::string, std::vector<uint8_t>, std::vector<uint8_t>>
         libspdm_get_certificate(transport->spdmContext.get(), nullptr, slotId,
                                 &certChainSize, certChain.data());
 
-    if (LIBSPDM_STATUS_IS_ERROR(status))
+    // Not LIBSPDM_STATUS_IS_ERROR: a chain that matches none of the provisioned
+    // trust anchors arrives as warning-severity
+    // LIBSPDM_STATUS_VERIF_NO_AUTHORITY, and would otherwise be published as
+    // though the responder had been authenticated.
+    if (status == LIBSPDM_STATUS_VERIF_NO_AUTHORITY)
+    {
+        using VerificationStatus = sdbusplus::common::xyz::openbmc_project::
+            attestation::IdentityAuthentication::VerificationStatus;
+        responder_verification_status(VerificationStatus::Failed);
+        if (verifyCert)
+        {
+            lg2::error(
+                "Responder cert chain for slot {SLOT} matches no trust anchor; refusing it. Provision the responder's CA, or clear the VerifyCertificate policy to override.",
+                "SLOT", slotId);
+            throw std::runtime_error(
+                "Certificate chain matches no trust anchor");
+        }
+        lg2::warning(
+            "Responder cert chain for slot {SLOT} matches no trust anchor; continuing because the VerifyCertificate policy is off. The responder is NOT authenticated.",
+            "SLOT", slotId);
+    }
+    else if (status != LIBSPDM_STATUS_SUCCESS)
     {
         lg2::error("libspdm_get_certificate failed, status: 0x{STATUS:X}",
                    "STATUS", status);
