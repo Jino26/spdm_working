@@ -76,7 +76,7 @@ class SpdmTransport
      * acquired. */
     bool sendReceiveBufferAcquired = false;
     /** @brief Negotiated SPDM protocol version to use. */
-    uint8_t useVersion = SPDM_MESSAGE_VERSION_11;
+    uint8_t useVersion = SPDM_MESSAGE_VERSION_13;
     /** @brief Requester capability flags to advertise. */
     uint32_t useRequesterCapabilityFlags = 0;
     /** @brief Requester slot ID used for certificate selection. */
