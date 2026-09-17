@@ -125,8 +125,11 @@ class SpdmTransport
     uint16_t supportAeadAlgo = SPDM_ALGORITHMS_AEAD_CIPHER_SUITE_AES_256_GCM;
     /** @brief Supported key schedule algorithm bitmask. */
     uint16_t supportKeyScheduleAlgo = SPDM_ALGORITHMS_KEY_SCHEDULE_SPDM;
-    /** @brief Supported other parameters bitmask. */
-    uint8_t supportOtherParamsSupport = 0;
+    /** @brief Supported other parameters bitmask.
+     *  @details SPDM 1.2+ KEY_EXCHANGE/PSK_EXCHANGE require OpaqueDataFmt1 to
+     *           be negotiated; libspdm refuses to start a session otherwise.
+     *           Ignored for 1.0/1.1. */
+    uint8_t supportOtherParamsSupport = SPDM_ALGORITHMS_OPAQUE_DATA_FORMAT_1;
     /** @brief libspdm data parameter used when setting/getting SPDM context
      * data. */
     libspdm_data_parameter_t parameter{};

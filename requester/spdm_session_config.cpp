@@ -249,7 +249,8 @@ libspdm_return_t applySecureSessionConfig(SpdmTransport& transport,
     }
 
     st = setDataAndCheck(ctx, LIBSPDM_DATA_OTHER_PARAMS_SUPPORT,
-                         cfg.otherParamsSupport, "OTHER_PARAMS_SUPPORT");
+                         transport.supportOtherParamsSupport,
+                         "OTHER_PARAMS_SUPPORT");
     if (LIBSPDM_STATUS_IS_ERROR(st))
     {
         return st;

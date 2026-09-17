@@ -12,6 +12,7 @@
 #include <poll.h>
 #include <sys/socket.h>
 
+#include <format>
 #include <string>
 
 namespace spdm
@@ -484,8 +485,10 @@ class TcpIoClass : public IOClass
         }
 
         lg2::debug(
-            "TCP received {SIZE} bytes (command=0x{CMD:X}, type=0x{TYPE:X})",
-            "SIZE", buf.size(), "CMD", command, "TYPE", transportType);
+            "TCP received {SIZE} bytes (command=0x{CMD}, type=0x{TYPE})",
+            "SIZE", buf.size(), "CMD",
+            std::format("{:X}", static_cast<unsigned>(command)), "TYPE",
+            std::format("{:X}", static_cast<unsigned>(transportType)));
         return LIBSPDM_STATUS_SUCCESS;
     }
 

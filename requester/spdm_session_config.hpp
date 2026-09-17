@@ -33,7 +33,6 @@ struct SecureSessionConfig
     uint16_t aeadCipher = SPDM_ALGORITHMS_AEAD_CIPHER_SUITE_AES_256_GCM;
     // Requester signing algorithms come from SpdmTransport::supportReqAsymAlgo.
     uint16_t keySchedule = SPDM_ALGORITHMS_KEY_SCHEDULE_SPDM;
-    uint8_t otherParamsSupport = 0;
 
     /// Trust anchor for verifying the responder's KEY_EXCHANGE_RSP signature.
     /// Resolution precedence (first non-empty wins):
